@@ -1,0 +1,19 @@
+body {
+  font-family: Arial;
+  padding: 20px;
+}
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.card {
+  border: 1px solid #ccc;
+  padding: 10px;
+  width: 200px;
+  border-radius: 8px;
+}
+a {
+  text-decoration: none;
+  color: blue;
+}
