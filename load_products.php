@@ -2,39 +2,45 @@
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "ecommerce_db"; // Change this if your DB is named differently
+$dbname = "ecommerce_db";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$file = fopen("products.csv", "r");
-fgetcsv($file); // skip header
+if (($handle = fopen("products.csv", "r")) !== false) {
+    fgetcsv($handle); // Skip header row
 
-while (($data = fgetcsv($file)) !== FALSE) {
-    $stmt = $conn->prepare("INSERT INTO products (id, cost, category, name, brand, retail_price, department, sku, distribution_center_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+        list($id, $name, $brand, $cost, $image, $description, $rating, $department_name) = $data;
 
-    $stmt->bind_param("idssssssi", 
-        $data[0], // id
-        $data[1], // cost
-        $data[2], // category
-        $data[3], // name
-        $data[4], // brand
-        $data[5], // retail_price
-        $data[6], // department
-        $data[7], // sku
-        $data[8]  // distribution_center_id
-    );
+        // Insert department if not exists
+        $dept_stmt = $conn->prepare("INSERT IGNORE INTO department_list (name) VALUES (?)");
+        $dept_stmt->bind_param("s", $department_name);
+        $dept_stmt->execute();
+        $dept_stmt->close();
 
-    $stmt->execute();
+        // Fetch department ID
+        $dept_id_stmt = $conn->prepare("SELECT id FROM department_list WHERE name = ?");
+        $dept_id_stmt->bind_param("s", $department_name);
+        $dept_id_stmt->execute();
+        $dept_id_result = $dept_id_stmt->get_result();
+        $department_id = $dept_id_result->fetch_assoc()['id'];
+        $dept_id_stmt->close();
+
+        // Insert product
+        $prod_stmt = $conn->prepare("INSERT INTO product_list (id, name, brand, cost, description, rating, department_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $prod_stmt->bind_param("issdsdi", $id, $name, $brand, $cost, $description, $rating, $department_id);
+        $prod_stmt->execute();
+        $prod_stmt->close();
+    }
+
+    fclose($handle);
+    echo "Data loaded successfully.";
+} else {
+    echo "Failed to open file.";
 }
 
-fclose($file);
 $conn->close();
-
-echo "Data loaded successfully.";
 ?>
